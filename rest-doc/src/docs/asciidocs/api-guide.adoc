@@ -74,7 +74,7 @@ not create URIs themselves, instead they should use the above-described links to
 The index provides the entry point into the service.
 
 [[resources-index-access]]
-=== Accessing the index
+=== Get
 
 A `GET` request is used to access the index
 
@@ -82,7 +82,20 @@ A `GET` request is used to access the index
 
 include::{snippets}/ret-get-test/http-request.adoc[]
 
-==== Request structure
+==== Response Fields
 
 include::{snippets}/ret-get-test/response-fields.adoc[]
+
+=== Post
+
+A `Post` request is used to access the index
+
+==== Request structure
+
+include::{snippets}/ret-post-test/http-request.adoc[]
+
+==== Response Fields
+
+include::{snippets}/ret-post-test/response-fields.adoc[]
+
 
