@@ -9,7 +9,7 @@ import com.jwk.spring.java.demo.utils.RefectionUtils;
 public class RefectionUtilsTest {
 	
 	@Test
-	public void setTest() throws NoSuchFieldException, SecurityException {
+	public void setTest() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		TestPath path = new TestPath();
 
 //		path.setId("test!!!!!!!!!");
@@ -22,7 +22,7 @@ public class RefectionUtilsTest {
 	}
 	
 	@Test
-	public void getTest() throws NoSuchFieldException, SecurityException {
+	public void getTest() throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		TestPath path = new TestPath();
 
 		path.setId("test!!!!!!!!!");

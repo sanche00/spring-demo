@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import com.jwk.spring.java.demo.ClassMap.ClassType;
+import com.jwk.spring.java.demo.utils.RefectionUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,8 +25,11 @@ public class ClassMapping implements Mapping {
 	ApplicationContext applicationContext;
 	
 	@Override
-	public Object map(Object r, Class<?> type, Object... objects) throws ClassNotFoundException {
-		Object ret = r;
+	public Object map(Class<?> type, Object... objects) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
+		return map(type.newInstance(), type, objects);
+	}
+	
+	private int getListIndex(Object... objects) {
 		int count = 0; 
 		int index = -1;
 		for(int i = 0 ; i < objects.length ; i++)  {
@@ -38,108 +42,169 @@ public class ClassMapping implements Mapping {
 		if(count > 1) {
 			throw new RuntimeException("지원 하지 않는 매핑 입력입니다.");
 		}
-		
-		if(index == -1) {
-			for(Object object : objects) {
-				ret = mapz(ret, type, object);	
-			}
-			return ret;
-		}else {
-			Collection<?> list = (Collection<?>) objects[index];
-			List result = new ArrayList<>();
-			for(Object o:list) {
-				ret = null;
-				ret = map(ret, type, o);
-				for(Object object : objects) {
-					ret = mapz(ret, type, object);	
-				}
-				result.add(ret);
-			}
-			return result;
-		}
+		return index;
 	}
 	
-	public List<?> mapList(Collection objects, Class<?> type) throws ClassNotFoundException {
+	private boolean isListMapping(int index) {
+		return index != -1;
+	}
+	
+	private List mappingList(Collection<?> list, Class<?> type, Object... objects) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
+		List result = new ArrayList<>();
+		for(Object o : list) {
+			Object ret = map(type, o);
+			for(Object object : objects) {
+				ret = mapping(ret, type, object);	
+			}
+			result.add(ret);
+		}
+		return result;
+	}
+	
+	@Override
+	public Object map(Object r, Class<?> type, Object... objects) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
+		Object ret = r;
+		int count = 0; 
+		int index = getListIndex(objects);
+		
+		if(isListMapping(index)) {
+			return mappingList((Collection<?>) objects[index], type, objects);
+		}
+		for(Object object : objects) {
+			ret = mapping(ret, type, object);	
+		}
+		return ret;
+	}
+	
+	public List<?> mappingList(Collection objects, Class<?> type) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
 		List ret = new ArrayList<>();
 		for(Object object: objects) {
-			Object r = mapz(null, type, object);
+			Object r = mapping(null, type, object);
 			ret.add(r);
 		}
 		return ret;
 	}
 	
-	public Object mapz(Object r, Class<?> type, Object object) throws ClassNotFoundException {
+	public Object mapping(Object r, Class<?> type, Object object) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
 		if(object == null || object instanceof Collection) {
 			return r;
 		}
-		
 		Object ret = r;
-		try {
-			
-			if(ret == null) {
-				ret = type.newInstance();
+		if(ret == null) {
+			ret = type.newInstance();
+		}
+		Field[] fields = object.getClass().getDeclaredFields();
+		for(Field field: fields) {
+			ClassMap[] maps = field.getAnnotationsByType(ClassMap.class);
+			if(maps == null || maps.length == 0) {
+				continue;
 			}
-			
-			Field[] fields = object.getClass().getDeclaredFields();
-			for(Field field: fields) {
-				ClassMap[] maps = field.getAnnotationsByType(ClassMap.class);
-				if(maps == null || maps.length == 0) {
+			for(ClassMap classMap : maps) {
+				if(!containsClasses(classMap.classes(), type)) {
 					continue;
 				}
-				for(ClassMap classMap : maps) {
-					
-					if(!containsClasses(classMap.classes(), type)) {
-						continue;
-					}
-					log.info("find !!! : {}", field.getName());
-					put(ret,type, object, field, classMap);
-				}
+				put(ret,type, object, field, classMap);
 			}
-			
-		} catch (InstantiationException | IllegalAccessException e) {
-			e.printStackTrace();
 		}
 		return ret;
 	}
 
-	private void put(Object r, Class<?> type,Object object, Field field, ClassMap classMap) throws ClassNotFoundException {
+	private boolean putDepthVaule(ClassMap classMap, Class<?> type, Object ret, Object r) throws IllegalArgumentException, IllegalAccessException, InstantiationException {
+		String fieldKeys[] = classMap.value().split("\\.");
+		if(fieldKeys.length > 1) {
+			if(findField(fieldKeys, type)) {
+				putDepthVaule(fieldKeys, type, ret, r);
+			}else {
+				log.warn("mapping faild");
+			}
+			return true;
+		}
+		return false;
+		
+	}
+
+	
+	private void put(Object r, Class<?> type,Object object, Field field, ClassMap classMap) throws ClassNotFoundException, InstantiationException, IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
 		Formatter formatter = getFormatter(classMap.format());
-		Field field2 = null;
-		try {
-			field.setAccessible(true);
-			Object ret = field.get(object);
-			if(Objects.isNull(ret)) {
-				return;
-			}
-			field2 = type.getDeclaredField(classMap.value());
-			if(classMap.type() == ClassType.NONE) {
-				field2.setAccessible(true);
-				field2.set(r, formatter.format(ret));
-			}else if(classMap.type() == ClassType.LIST){
-				if(!field2.getType().isAssignableFrom(List.class) || !(ret instanceof Collection) || classMap.listClassName().isEmpty()) {
-					return ;
+		Field descField = null;
+		
+		Object ret = RefectionUtils.getFieldValue(field, object);
+		if(Objects.isNull(ret)) {
+			return;
+		}
+		if(putDepthVaule(classMap, type, ret, r)) {
+			return;
+		}
+		
+		descField = type.getDeclaredField(classMap.value());
+		switch (classMap.type() ) {
+		case NONE:
+			RefectionUtils.setFieldValue(descField, r, formatter.format(ret));
+			break;
+		case LIST:
+			valideteListMapMeta(descField, ret, classMap);
+			Object value = mappingList((Collection)ret, getClass().getClassLoader().loadClass(classMap.listClassName()));
+			RefectionUtils.setFieldValue(descField, r, value);
+			break;
+		case OBJECT:
+			value = map(descField.getType() , ret);
+			RefectionUtils.setFieldValue(descField, r, value);
+			break;
+		default:
+			break;
+		}
+	}
+
+	
+	private void valideteListMapMeta(Field descField, Object ret, ClassMap classMap) {
+		if(!descField.getType().isAssignableFrom(List.class) || !(ret instanceof Collection) || classMap.listClassName().isEmpty()) {
+			throw new RuntimeException("리스트 매핑 설정이 맞지 않습니다.");
+		}
+	}
+
+	private boolean isLast(int i, int len) {
+		return i+1 >= len;
+	}
+	private void putDepthVaule(String[] fieldKeys, Class<?> type, Object value, Object obj) throws IllegalArgumentException, IllegalAccessException, InstantiationException {
+		Class<?> nowType = type; 
+		Object nowObj = obj; 
+		for(int i = 0; i< fieldKeys.length ; i++) {
+			Field f = findField(fieldKeys[i], nowType);
+			if(!isLast(i, fieldKeys.length)) {
+				Object temp = RefectionUtils.getFieldValue(f, nowObj);
+				if(Objects.isNull(temp)) {
+					temp = f.getType().newInstance();
+					RefectionUtils.setFieldValue(f, nowObj, temp);
 				}
-				Object value = mapList((Collection)ret, getClass().getClassLoader().loadClass(classMap.listClassName()));
-				field2.setAccessible(true);
-				field2.set(r, value);
-				
-			}else if(classMap.type() == ClassType.OBJECT) {
-				Object value = map(null, field2.getType() , ret);
-				field2.setAccessible(true);
-				field2.set(r, value);
-			}
-		} catch (IllegalArgumentException | IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (NoSuchFieldException e) {
-			e.printStackTrace();
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		}finally {
-			field.setAccessible(false);
-			if(field2 != null) {
-				field2.setAccessible(false);
+				nowObj = temp;
+			}else {
+				RefectionUtils.setFieldValue(f, nowObj, value);
 			}
 		}
+	}
+
+	private boolean findField(String[] fieldKeys, Class<?> type) {
+		Class<?> nowType = type; 
+		for(String key : fieldKeys) {
+			nowType = findField(key, nowType).getType();
+			if(nowType == null)
+				return false;
+		}
+		return true;
+	}
+	
+	private Field findField(String key, Class<?> type) {
+		
+		try {
+			Field f = type.getDeclaredField(key);
+			if(Objects.isNull(f)) {
+				return f;
+			}
+			return f;
+		} catch (NoSuchFieldException | SecurityException e) {
+			return null;
+		}
+		
 	}
 
 	private Formatter getFormatter(Class<? extends Formatter<?, ?>> format) {
@@ -154,4 +219,6 @@ public class ClassMapping implements Mapping {
 		}
 		return false;
 	}
+
+	
 }

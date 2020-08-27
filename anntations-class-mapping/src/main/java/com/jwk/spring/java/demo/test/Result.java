@@ -16,4 +16,6 @@ public class Result {
 	Result result;
 	
 	List<Result> sss;
+	
+	Result result2;
 }

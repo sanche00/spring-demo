@@ -20,7 +20,8 @@ public class Result2 {
 	@ClassMap(classes = {Result.class}, value = "result" , type = ClassType.OBJECT)
 	Argument1 xx;
 	
-
+	@ClassMap(classes = {Result.class}, value = "result2.ret")
+	String retxxx;
 	
 	
 }
