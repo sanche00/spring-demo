@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class RestDocApplication {
 
 	public static void main(String[] args) {
+		System.out.println("zzz");
 		SpringApplication.run(RestDocApplication.class, args);
 	}
 	
