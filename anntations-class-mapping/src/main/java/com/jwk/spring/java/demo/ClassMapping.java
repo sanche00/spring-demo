@@ -1,6 +1,8 @@
 package com.jwk.spring.java.demo;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -11,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
-import com.jwk.spring.java.demo.ClassMap.ClassType;
 import com.jwk.spring.java.demo.utils.RefectionUtils;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,8 +26,12 @@ public class ClassMapping implements Mapping {
 	ApplicationContext applicationContext;
 	
 	@Override
-	public Object map(Class<?> type, Object... objects) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
-		return map(type.newInstance(), type, objects);
+	public Object map(Class<?> type, Object... objects) {
+		try {
+			return map(type.newInstance(), type, objects);
+		} catch (InstantiationException | IllegalAccessException e) {
+			throw new RuntimeException("자동 매핑 실패");
+		}
 	}
 	
 	private int getListIndex(Object... objects) {
@@ -49,7 +54,7 @@ public class ClassMapping implements Mapping {
 		return index != -1;
 	}
 	
-	private List mappingList(Collection<?> list, Class<?> type, Object... objects) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
+	private List mappingList(Collection<?> list, Class<?> type, Object... objects) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException, InvocationTargetException {
 		List result = new ArrayList<>();
 		for(Object o : list) {
 			Object ret = map(type, o);
@@ -62,21 +67,26 @@ public class ClassMapping implements Mapping {
 	}
 	
 	@Override
-	public Object map(Object r, Class<?> type, Object... objects) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
-		Object ret = r;
-		int count = 0; 
-		int index = getListIndex(objects);
-		
-		if(isListMapping(index)) {
-			return mappingList((Collection<?>) objects[index], type, objects);
+	public Object map(Object r, Class<?> type, Object... objects) {
+		try {
+			
+			Object ret = r;
+			int index = getListIndex(objects);
+			
+			if(isListMapping(index)) {
+				return mappingList((Collection<?>) objects[index], type, objects);
+			}
+			for(Object object : objects) {
+				ret = mapping(ret, type, object);	
+			}
+			return ret;
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException | IllegalArgumentException
+				| NoSuchFieldException | SecurityException | InvocationTargetException e) {
+			throw new RuntimeException("자동 매핑 실패");
 		}
-		for(Object object : objects) {
-			ret = mapping(ret, type, object);	
-		}
-		return ret;
 	}
 	
-	public List<?> mappingList(Collection objects, Class<?> type) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
+	public List<?> mappingList(Collection objects, Class<?> type) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException, InvocationTargetException {
 		List ret = new ArrayList<>();
 		for(Object object: objects) {
 			Object r = mapping(null, type, object);
@@ -85,7 +95,7 @@ public class ClassMapping implements Mapping {
 		return ret;
 	}
 	
-	public Object mapping(Object r, Class<?> type, Object object) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException {
+	public Object mapping(Object r, Class<?> type, Object object) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, NoSuchFieldException, SecurityException, InvocationTargetException {
 		if(object == null || object instanceof Collection) {
 			return r;
 		}
@@ -106,7 +116,62 @@ public class ClassMapping implements Mapping {
 				put(ret,type, object, field, classMap);
 			}
 		}
+		
+		Method methods[] = object.getClass().getDeclaredMethods();
+		for(Method method: methods) {
+			ClassMap[] maps = method.getAnnotationsByType(ClassMap.class);
+			if(maps == null || maps.length == 0) {
+				continue;
+			}
+			for(ClassMap classMap : maps) {
+				if(!containsClasses(classMap.classes(), type)) {
+					continue;
+				}
+				put(ret,type, object, method, classMap);
+			}
+		}
 		return ret;
+	}
+
+	private void put(Object r, Class<?> type, Object object, Method method, ClassMap classMap) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, InstantiationException, NoSuchFieldException, SecurityException, ClassNotFoundException {
+		if(method.getParameterCount() > 0) {
+			log.warn("지원하지 않는 Method 처리 입니다. {} ", method.getName());
+			return;
+		}
+		
+		Formatter formatter = getFormatter(classMap.format());
+		Object value = method.invoke(object, null);
+		setDescValue(r, value, classMap, type, formatter);
+		
+	}
+	
+
+
+	private void setDescValue(Object r, Object value, ClassMap classMap, Class<?> type, Formatter formatter) throws IllegalArgumentException, IllegalAccessException, InstantiationException, NoSuchFieldException, SecurityException, ClassNotFoundException, InvocationTargetException {
+		if(Objects.isNull(value)) {
+			return;
+		}
+		if(putDepthVaule(classMap, type, value, r)) {
+			return;
+		}
+		
+		Field descField = type.getDeclaredField(classMap.value());
+		switch (classMap.type() ) {
+		case NONE:
+			RefectionUtils.setFieldValue(descField, r, formatter.format(value));
+			break;
+		case LIST:
+			valideteListMapMeta(descField, value, classMap);
+			Object valueList = mappingList((Collection)value, getClass().getClassLoader().loadClass(classMap.listClassName()));
+			RefectionUtils.setFieldValue(descField, r, valueList);
+			break;
+		case OBJECT:
+			Object valueObj = map(descField.getType() , value);
+			RefectionUtils.setFieldValue(descField, r, valueObj);
+			break;
+		default:
+			break;
+		}
 	}
 
 	private boolean putDepthVaule(ClassMap classMap, Class<?> type, Object ret, Object r) throws IllegalArgumentException, IllegalAccessException, InstantiationException {
@@ -124,35 +189,10 @@ public class ClassMapping implements Mapping {
 	}
 
 	
-	private void put(Object r, Class<?> type,Object object, Field field, ClassMap classMap) throws ClassNotFoundException, InstantiationException, IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
+	private void put(Object r, Class<?> type,Object object, Field field, ClassMap classMap) throws ClassNotFoundException, InstantiationException, IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException, InvocationTargetException {
 		Formatter formatter = getFormatter(classMap.format());
-		Field descField = null;
-		
-		Object ret = RefectionUtils.getFieldValue(field, object);
-		if(Objects.isNull(ret)) {
-			return;
-		}
-		if(putDepthVaule(classMap, type, ret, r)) {
-			return;
-		}
-		
-		descField = type.getDeclaredField(classMap.value());
-		switch (classMap.type() ) {
-		case NONE:
-			RefectionUtils.setFieldValue(descField, r, formatter.format(ret));
-			break;
-		case LIST:
-			valideteListMapMeta(descField, ret, classMap);
-			Object value = mappingList((Collection)ret, getClass().getClassLoader().loadClass(classMap.listClassName()));
-			RefectionUtils.setFieldValue(descField, r, value);
-			break;
-		case OBJECT:
-			value = map(descField.getType() , ret);
-			RefectionUtils.setFieldValue(descField, r, value);
-			break;
-		default:
-			break;
-		}
+		Object value = RefectionUtils.getFieldValue(field, object);
+		setDescValue(r, value, classMap, type, formatter);
 	}
 
 	
