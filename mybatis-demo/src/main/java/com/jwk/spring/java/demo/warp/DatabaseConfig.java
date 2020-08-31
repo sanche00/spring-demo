@@ -1,0 +1,33 @@
+package com.jwk.spring.java.demo.warp;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.sql.DataSource;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class DatabaseConfig {
+	@Bean
+	public DataSource createRouterDatasource() {
+		AbstractRoutingDataSourceCustom routingDataSource = new MyRoutingDataSource();
+		Map<Object, Object> targetDataSources = new HashMap<>();
+		targetDataSources.put("current:db01",
+				createDataSource("jdbc:postgresql://localhost:5432/postgres", "postgres", "lutes0319"));
+		targetDataSources.put("current:db02",
+				createDataSource("jdbc:postgresql://localhost:5432/postgres", "postgres", "lutes0319"));
+		routingDataSource.setTargetDataSources(targetDataSources);
+		return routingDataSource;
+	}
+
+	private DataSource createDataSource(String url, String user, String password) {
+		com.zaxxer.hikari.HikariDataSource dataSource = new com.zaxxer.hikari.HikariDataSource();
+		dataSource.setDriverClassName("org.postgresql.Driver");
+		dataSource.setUsername(user);
+		dataSource.setPassword(password);
+		dataSource.setJdbcUrl(url);
+		return dataSource;
+	}
+}
