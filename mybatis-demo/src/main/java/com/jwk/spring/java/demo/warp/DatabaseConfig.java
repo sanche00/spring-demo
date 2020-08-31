@@ -15,9 +15,9 @@ public class DatabaseConfig {
 		AbstractRoutingDataSourceCustom routingDataSource = new MyRoutingDataSource();
 		Map<Object, Object> targetDataSources = new HashMap<>();
 		targetDataSources.put("current:db01",
-				createDataSource("jdbc:postgresql://localhost:5432/postgres", "postgres", "lutes0319"));
+				createDataSource("jdbc:postgresql://localhost:5432/postgres", "postgres", ""));
 		targetDataSources.put("current:db02",
-				createDataSource("jdbc:postgresql://localhost:5432/postgres", "postgres", "lutes0319"));
+				createDataSource("jdbc:postgresql://localhost:5432/postgres", "postgres", ""));
 		routingDataSource.setTargetDataSources(targetDataSources);
 		return routingDataSource;
 	}
