@@ -1,5 +1,7 @@
 package com.jwk.spring.java.demo;
 
 public interface Mapping {
-	<R> R map(R r, Class<R> type, Object... objects);
+	Object map(Object r, Class<?> type, Object... objects)  ;
+	
+	Object map(Class<?> type, Object... objects)   ;
 }

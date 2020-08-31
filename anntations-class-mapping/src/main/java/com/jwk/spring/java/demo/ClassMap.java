@@ -10,8 +10,9 @@ import java.lang.annotation.Target;
 public @interface ClassMap {
 	Class<?>[] classes();
 	Class<? extends Formatter<?,?>> format() default DefaultFormatter.class;
-	String value() default "";
+	String value() ;
 	ClassType type() default ClassType.NONE;
+	String listClassName() default "";
 	static enum ClassType {
 		NONE, LIST, OBJECT
 	}
