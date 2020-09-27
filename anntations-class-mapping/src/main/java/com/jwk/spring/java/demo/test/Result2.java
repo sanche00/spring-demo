@@ -1,5 +1,6 @@
 package com.jwk.spring.java.demo.test;
 
+import com.jwk.spring.java.demo.Condition;
 import com.jwk.spring.java.demo.classes.ClassMap;
 import com.jwk.spring.java.demo.classes.ClassMap.ClassType;
 
@@ -20,7 +21,7 @@ public class Result2 {
 	@ClassMap(classes = {Result.class}, value = "result" , type = ClassType.OBJECT)
 	Argument1 xx;
 	
-	@ClassMap(classes = {Result.class}, value = "result2.ret")
+	@ClassMap(classes = {Result.class}, value = "result2.ret" , conditonClass = TestCondition.class)
 	String retxxx;
 	
 	
