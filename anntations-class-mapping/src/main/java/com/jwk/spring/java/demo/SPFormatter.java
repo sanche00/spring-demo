@@ -1,5 +1,6 @@
 package com.jwk.spring.java.demo;
 
-public interface Formatter<T,R> {
+public interface SPFormatter<T,R> {
 	R format(T t);
+	T parse(R r);
 }

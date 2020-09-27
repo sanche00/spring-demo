@@ -36,7 +36,7 @@ public class TestController {
 	public void add(@PathVariable("key") String key) {
 		log.info("{}", createRouterDatasource);
 		MyRoutingDataSource myRoutingDataSource = MyRoutingDataSource.class.cast(createRouterDatasource);
-		myRoutingDataSource.addDatasurce(key, createDataSource("jdbc:postgresql://localhost:5432/postgres", "postgres", ""));
+		myRoutingDataSource.addDatasurce(key, createDataSource("jdbc:postgresql://sellpick-dev-main.cluster-c6bwy8w0ihhy.ap-northeast-2.rds.amazonaws.com/sellpickdevSales", "us_sellpick", "us_sellpick"));
 	}
 	@GetMapping("/get/{key}")
 	public String get(HttpSession session, @PathVariable("key") String key) {

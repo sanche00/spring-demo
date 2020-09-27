@@ -5,6 +5,6 @@ import org.apache.ibatis.annotations.Select;
 
 @Mapper
 public interface MyMapper {
-	@Select("SELECT test1 FROM public.tbl_test_clob limit 1;")
+	@Select("SELECT small_cd FROM public.tba_smallllf_m limit 1")
 	String findDbName();
 }

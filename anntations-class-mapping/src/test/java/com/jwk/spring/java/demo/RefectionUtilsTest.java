@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.jwk.spring.java.demo.utils.RefectionUtils;
+import com.jwk.spring.java.demo.utils.ReflectionUtils;
 
 public class RefectionUtilsTest {
 	
@@ -15,8 +15,8 @@ public class RefectionUtilsTest {
 //		path.setId("test!!!!!!!!!");
 //		path.setSeq(13);
 //		
-		RefectionUtils.setFieldValue(path.getClass().getDeclaredField("id"), path, "TEST");
-		RefectionUtils.setFieldValue(path.getClass().getDeclaredField("seq"), path, 14);
+		ReflectionUtils.setFieldValue(path.getClass().getDeclaredField("id"), path, "TEST");
+		ReflectionUtils.setFieldValue(path.getClass().getDeclaredField("seq"), path, 14);
 		assertEquals("TEST", path.getId());
 		assertEquals(14, path.getSeq());
 	}
@@ -28,9 +28,9 @@ public class RefectionUtilsTest {
 		path.setId("test!!!!!!!!!");
 		path.setSeq(13);
 //		
-		RefectionUtils.getFieldValue(path.getClass().getDeclaredField("id"), path);
-		RefectionUtils.getFieldValue(path.getClass().getDeclaredField("seq"), path);
-		assertEquals("test!!!!!!!!!",RefectionUtils.getFieldValue(path.getClass().getDeclaredField("id"), path));
-		assertEquals(13, RefectionUtils.getFieldValue(path.getClass().getDeclaredField("seq"), path));
+		ReflectionUtils.getFieldValue(path.getClass().getDeclaredField("id"), path);
+		ReflectionUtils.getFieldValue(path.getClass().getDeclaredField("seq"), path);
+		assertEquals("test!!!!!!!!!",ReflectionUtils.getFieldValue(path.getClass().getDeclaredField("id"), path));
+		assertEquals(13, ReflectionUtils.getFieldValue(path.getClass().getDeclaredField("seq"), path));
 	}
 }

@@ -4,7 +4,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 
 
-public class RefectionUtils {
+public class ReflectionUtils {
 
 	public static <R extends Annotation> R[] getAnnotationsByType(Field field, Object object, Class<R> type) {
 		return null;

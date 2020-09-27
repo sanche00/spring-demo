@@ -3,8 +3,8 @@ package com.jwk.spring.java.demo.test;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.jwk.spring.java.demo.ClassMap;
-import com.jwk.spring.java.demo.ClassMap.ClassType;
+import com.jwk.spring.java.demo.classes.ClassMap;
+import com.jwk.spring.java.demo.classes.ClassMap.ClassType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

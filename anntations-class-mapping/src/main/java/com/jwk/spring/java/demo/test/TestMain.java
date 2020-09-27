@@ -3,7 +3,7 @@ package com.jwk.spring.java.demo.test;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.jwk.spring.java.demo.ClassMapping;
+import com.jwk.spring.java.demo.classes.ClassMapping;
 
 public class TestMain {
 
