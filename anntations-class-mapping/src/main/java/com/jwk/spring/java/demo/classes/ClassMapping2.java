@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Qualifier("ClassMapping")
 @Component
-public class ClassMapping implements Mapping {
+public class ClassMapping2 implements Mapping {
 
 	@Autowired
 	private BeanFactory beanFactory;
